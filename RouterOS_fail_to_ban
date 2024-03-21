@@ -1,0 +1,12 @@
+/ip firewall address-list 
+add list=whitelist_access address=%whitelisted_ip%
+/ip firewall filter
+add chain=forward action=accept connection-state=new protocol=tcp src-address-list=whitelist_access dst-port=3389 log=no log-prefix=""
+add chain=forward action=add-src-to-address-list connection-state=new protocol=tcp src-address-list=rdp_blacklist address-list=rdp_blacklist address-list-timeout=1d
+add chain=forward action=drop connection-state=new protocol=tcp src-address-list=rdp_blacklist dst-port=3389 log=yes log-prefix="RDP_DROP"
+add chain=forward action=add-src-to-address-list connection-state=new protocol=tcp src-address-list=rdp_stage5 address-list=rdp_blacklist address-list-timeout=1d
+add chain=forward action=add-src-to-address-list connection-state=new protocol=tcp src-address-list=rdp_stage4 address-list=rdp_stage5 address-list-timeout=4m
+add chain=forward action=add-src-to-address-list connection-state=new protocol=tcp src-address-list=rdp_stage3 address-list=rdp_stage4 address-list-timeout=4m
+add chain=forward action=add-src-to-address-list connection-state=new protocol=tcp src-address-list=rdp_stage2 address-list=rdp_stage3 address-list-timeout=4m
+add chain=forward action=add-src-to-address-list connection-state=new protocol=tcp src-address-list=rdp_stage1 address-list=rdp_stage2 address-list-timeout=4m
+add chain=forward action=add-src-to-address-list connection-state=new protocol=tcp address-list=rdp_stage1 address-list-timeout=4m dst-port=3389 log=y
