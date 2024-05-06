@@ -41,7 +41,7 @@ with open('ips', 'r') as f:
         print("Extracted name:", name)
 
         # Execute the export command on the MikroTik device using sshpass
-        os.system(f'sshpass -p "{password}" ssh -o StrictHostKeyChecking=no {username}@{ip} "/export file={name}"')
+        os.system(f'sshpass -p "{password}" ssh -o StrictHostKeyChecking=no {username}@{ip} "/export file={name} show-sensitive"')
         print("Export command executed for", name)
 
         # Delay to ensure file is created
