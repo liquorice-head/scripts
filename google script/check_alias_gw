@@ -1,0 +1,82 @@
+/**
+ * Minimal standalone Google Apps Script
+ * Finds which USER or GROUP owns a given email alias
+ *
+ * Requirements:
+ * - Enable Admin Directory API (v1)
+ * - Run as Workspace admin (read-only users & groups)
+ */
+
+// ================== CONFIG ==================
+const ALIAS_TO_LOOKUP = 'security@company.com';
+// ============================================
+
+function runAliasLookup() {
+  const result = findAliasOwner(ALIAS_TO_LOOKUP);
+  Logger.log(JSON.stringify(result, null, 2));
+}
+
+function findAliasOwner(aliasEmail) {
+  if (!aliasEmail || typeof aliasEmail !== 'string') {
+    return { error: 'EMPTY_ALIAS' };
+  }
+
+  const alias = aliasEmail.trim().toLowerCase();
+  if (!alias) {
+    return { error: 'EMPTY_ALIAS' };
+  }
+
+  // -------- USERS --------
+  let pageToken;
+  do {
+    const users = AdminDirectory.Users.list({
+      customer: 'my_customer',
+      maxResults: 500,
+      pageToken: pageToken,
+      fields: 'users(primaryEmail,name.fullName,aliases),nextPageToken'
+    });
+
+    if (users.users) {
+      for (const user of users.users) {
+        const aliases = (user.aliases || []).map(a => a.toLowerCase());
+        if (aliases.includes(alias)) {
+          return {
+            type: 'USER',
+            primaryEmail: user.primaryEmail,
+            name: user.name && user.name.fullName ? user.name.fullName : ''
+          };
+        }
+      }
+    }
+
+    pageToken = users.nextPageToken;
+  } while (pageToken);
+
+  // -------- GROUPS --------
+  pageToken = null;
+  do {
+    const groups = AdminDirectory.Groups.list({
+      customer: 'my_customer',
+      maxResults: 200,
+      pageToken: pageToken,
+      fields: 'groups(email,name,aliases),nextPageToken'
+    });
+
+    if (groups.groups) {
+      for (const group of groups.groups) {
+        const aliases = (group.aliases || []).map(a => a.toLowerCase());
+        if (aliases.includes(alias)) {
+          return {
+            type: 'GROUP',
+            primaryEmail: group.email,
+            name: group.name || ''
+          };
+        }
+      }
+    }
+
+    pageToken = groups.nextPageToken;
+  } while (pageToken);
+
+  return { error: 'NOT_FOUND' };
+}
